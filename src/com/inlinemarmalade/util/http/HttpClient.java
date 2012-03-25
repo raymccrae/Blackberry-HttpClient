@@ -19,18 +19,22 @@ package com.inlinemarmalade.util.http;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.Hashtable;
+import java.util.Vector;
 
 import javax.microedition.io.Connection;
 import javax.microedition.io.HttpConnection;
+import javax.microedition.io.SocketConnection;
 import javax.microedition.io.file.FileConnection;
 
+import net.rim.device.api.io.MalformedURIException;
 import net.rim.device.api.io.NoCopyByteArrayOutputStream;
+import net.rim.device.api.io.URI;
 import net.rim.device.api.io.http.HttpProtocolConstants;
 import net.rim.device.api.io.transport.ConnectionDescriptor;
 import net.rim.device.api.io.transport.ConnectionFactory;
-import net.rim.device.api.ui.component.Dialog;
 
 /**
  * HttpClient 
@@ -44,6 +48,7 @@ public class HttpClient {
 	protected ConnectionFactory _factory;
 	protected String _userAgent;
 	protected int _maxRedirect = DEFAULT_MAX_REDIRECT_COUNT;
+	protected HttpProxy _proxy;
 	
 	public HttpClient(ConnectionFactory factory) {
 		_factory = factory;
@@ -55,7 +60,84 @@ public class HttpClient {
 	}
 	
 	public void setProxy(HttpProxy proxy) {
+		_proxy = proxy;
+	}
+	
+	protected HttpResponse executeProxyConnection(String url, int redirectCount, HttpRequest request) throws IOException, IllegalArgumentException, MalformedURIException {
+		if (_maxRedirect != -1 && redirectCount >= _maxRedirect) {
+			throw new IOException("Exceeded max redirect count");
+		}
 		
+		HttpResponse response = null;
+		InputStream in = null;
+		HttpConnection hconn = null;
+		OutputStream out = null;
+		
+		URI uri = URI.create(url);
+		
+		String proxyUrl = "socket://" + _proxy._host + ":" + _proxy._port;
+		try {
+			ConnectionDescriptor desc = _factory.getConnection(proxyUrl);
+			Connection conn = desc.getConnection();
+			if (conn == null)
+				throw new IOException("Unable to create connection");
+			SocketConnection sconn = (SocketConnection) conn;
+			
+			StringBuffer buf = new StringBuffer();
+			buf.append(request._method);
+			buf.append(' ');
+			buf.append(url);
+			buf.append(" HTTP/1.1");
+			buf.append("\r\n");
+			buf.append("Host: ");
+			buf.append(uri.getHost());
+			buf.append("\r\n");
+			buf.append("\r\n");
+			
+			out = sconn.openOutputStream();
+			out.write(buf.toString().getBytes());
+			out.close();
+			out = null;
+			
+			in = sconn.openInputStream();
+			InputStreamReader reader = new InputStreamReader(in);
+			
+			response = new HttpResponse();
+			response._headers = new Hashtable();
+			
+			buf.setLength(0);
+			int ch = reader.read();
+			while (ch != -1) {
+				buf.append((char) ch);
+				ch = reader.read();
+				
+				if (ch == '\r') {
+					ch = reader.read();
+					if (ch == '\n') {
+						parseHeader(buf.toString(), response._headers);
+						buf.setLength(0);
+						
+						ch = reader.read();
+						if (ch == '\r') {
+							ch = reader.read();
+							if (ch == '\n') {
+								break;
+							}
+						}
+					}
+					else {
+						buf.append('\r');
+						buf.append((char) ch);
+					}
+				}
+			}
+		}
+		finally {
+			if (hconn != null)
+				hconn.close();
+		}
+		
+		return response;
 	}
 	
 	protected HttpResponse executeDirectConnection(String url, int redirectCount, HttpRequest request) throws IOException {
@@ -65,10 +147,10 @@ public class HttpClient {
 		
 		HttpResponse response = null;
 		InputStream in = null;
+		OutputStream out = null;
 		HttpConnection hconn = null;
 		OutputStream stream = null;
 		
-		Dialog.alert(url);
 		try {
 			ConnectionDescriptor desc = _factory.getConnection(url);
 			Connection conn = desc.getConnection();
@@ -87,17 +169,32 @@ public class HttpClient {
 					hconn.setRequestProperty(key, value);
 				}
 				
+				// If User-Agent is not set the set it
 				if (_userAgent != null && request._headers.getPropertyValue(HttpProtocolConstants.HEADER_USER_AGENT) == null)
 					hconn.setRequestProperty(HttpProtocolConstants.HEADER_USER_AGENT, _userAgent);
 			}
 			
-			if (request._data != null) {
-				//OutputStream out = hconn.openOutputStream();
-				//out.write(request._dataBytes);
+			// If this is a POST or PUT request then write post data
+			if (request._method.equals("POST") || request._method.equals("PUT")) {
+				if (request._headers.getPropertyValues(HttpProtocolConstants.HEADER_CONTENT_TYPE) == null) {
+					String contentType = request.getContentType();
+					if (contentType != null)
+						hconn.setRequestProperty(HttpProtocolConstants.HEADER_CONTENT_TYPE, contentType);
+				}
+				if (request._headers.getPropertyValues(HttpProtocolConstants.HEADER_CONTENT_LENGTH) == null) {
+					long length = request.getContentLength();
+					if (length != -1)
+						hconn.setRequestProperty(HttpProtocolConstants.HEADER_CONTENT_LENGTH, String.valueOf(length));
+				}
+				
+				out = hconn.openOutputStream();
+				request.writePostData(out);
+				out.close();
+				out = null;
 			}
 			
 			int responseCode = hconn.getResponseCode();
-			Dialog.alert("Code " + responseCode);
+
 			switch (responseCode) {
 			case HttpConnection.HTTP_OK:
 				try {
@@ -105,21 +202,36 @@ public class HttpClient {
 					long contentLength = hconn.getLength();
 					stream = getRequestOutputStream(request, contentLength);
 					
-					
+					// Copy data from http connection
 					dataPump(in, stream);
 					
 					response = new HttpResponse();
 					response._responseCode = responseCode;
 					response._headers = new Hashtable();
 					
-					
-					
+					// Read Response headers
 					String key = null, value = null;
 					for (int index = 0; key != null; index++) {
 						key = hconn.getHeaderFieldKey(index);
 						if (key != null) {
 							value = hconn.getHeaderField(index);
-							response._headers.put(key, value);
+							
+							// If the header is duplicated store the values in a vector
+							if (response._headers.contains(key)) {
+								Object obj = response._headers.get(key);
+								if (obj instanceof Vector) {
+									((Vector)obj).addElement(value);
+								}
+								else {
+									Vector v = new Vector();
+									v.addElement(obj);
+									v.addElement(value);
+									response._headers.put(key, v);
+								}
+							}
+							else { // else store the single string
+								response._headers.put(key, value);
+							}
 						}
 					}
 					
@@ -141,6 +253,12 @@ public class HttpClient {
 			}
 		}
 		finally {
+			if (out != null)
+				out.close();
+			
+			if (in != null)
+				in.close();
+			
 			if (hconn != null)
 				hconn.close();
 		}
@@ -200,8 +318,11 @@ public class HttpClient {
 	        return tmp.toString(); 
 	    } 
 	    return null; 
-	} 
+	}
 
+	private void parseHeader(String line, Hashtable headers) {
+		
+	}
 	
 	private static void dataPump(InputStream in, OutputStream out) throws IOException {
 		byte[] buffer = new byte[DEFAULT_COPY_BUFFER_SIZE];

@@ -19,6 +19,7 @@ package com.inlinemarmalade.util.http;
 
 import java.io.UnsupportedEncodingException;
 import java.util.Hashtable;
+import java.util.Vector;
 
 import net.rim.device.api.io.http.HttpProtocolConstants;
 
@@ -66,7 +67,7 @@ public class HttpResponse {
 		
 		// Check if encoding is specified in the content-type charset
 		if (_headers.containsKey(HttpProtocolConstants.HEADER_CONTENT_TYPE)) {
-			String contentType = (String) _headers.get(HttpProtocolConstants.HEADER_CONTENT_TYPE);
+			String contentType = getFirstHeaderValue(HttpProtocolConstants.HEADER_CONTENT_TYPE);
 			int index = contentType.indexOf("charset");
 			if (index != -1) {
 				encoding = contentType.substring(index + 8);
@@ -74,5 +75,25 @@ public class HttpResponse {
 		}
 		
 		return getResponseText(encoding);
+	}
+	
+	public boolean containsHeader(String header) {
+		return _headers.contains(header);
+	}
+	
+	public String getFirstHeaderValue(String header) {
+		String value = null;
+		
+		if (_headers.contains(header)) {
+			Object val = _headers.get(header);
+			if (val instanceof Vector)
+				value = (String) ((Vector)val).elementAt(0);
+			else if (val instanceof String)
+				value = (String) val;
+			else
+				value = val.toString();
+		}
+		
+		return value;
 	}
 }

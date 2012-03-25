@@ -6,4 +6,11 @@ public class HttpProxy {
 	protected int _port;
 	protected String _username;
 	protected String _password;
+	
+	public HttpProxy(String host, int port, String username, String password) {
+		_host = host;
+		_port = port;
+		_username = username;
+		_password = password;
+	}
 }
