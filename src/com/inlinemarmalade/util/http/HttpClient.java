@@ -281,6 +281,9 @@ public class HttpClient {
 		else if (request._output instanceof FileConnection) {
 			return ((FileConnection)request._output).openOutputStream();
 		}
+		else if (request._output instanceof OutputStream) {
+			return (OutputStream) request._output;
+		}
 		
 		return null;
 	}

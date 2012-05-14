@@ -45,6 +45,18 @@ public class HttpResponse {
 	}
 	
 	/**
+	 * Get the response body as a byte array.
+	 * @return The response body as a byte array.
+	 */
+	public byte[] getResponseByte() {
+		return _response;
+	}
+	
+	public int getResponseSize() {
+		return _responseSize;
+	}
+	
+	/**
 	 * Get the response body as a text string. The content is converted using the specified
 	 * text encoding.
 	 * @param encoding

@@ -54,13 +54,22 @@ public class HttpRequest {
 		return get(url, null, null, file);
 	}
 	
+	public static HttpRequest get(String url, Hashtable args, HttpHeaders headers, OutputStream out) {
+		HttpRequest r = get(url, args, headers);
+		r._output = out;
+		return r;
+	}
+	
+	public static HttpRequest get(String url, OutputStream out) {
+		return get(url, null, null, out);
+	}
+	
 	public static HttpRequest get(String url, Hashtable args, HttpHeaders headers) {
 		HttpRequest request = new HttpRequest();
 		request._url = url;
 		request._method = HttpProtocolConstants.HTTP_METHOD_GET;
-		request._data = convertFormParametersToBytes(args);
+		request._data = args;
 		request._headers = headers;
-		request._contentType = "application/x-www-form-urlencoded;charset=UTF-8";
 		return request;
 	}
 	
@@ -84,8 +93,10 @@ public class HttpRequest {
 		HttpRequest request = new HttpRequest();
 		request._url = url;
 		request._method = HttpProtocolConstants.HTTP_METHOD_POST;
-		request._data = args;
+		if (args != null)
+			request._data = convertFormParametersToBytes(args);
 		request._headers = headers;
+		request._contentType = "application/x-www-form-urlencoded;charset=UTF-8";
 		return request;
 	}
 	
