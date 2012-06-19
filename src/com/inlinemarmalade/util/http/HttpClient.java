@@ -1,3 +1,4 @@
+//#preprocess
 
 /*
  * Copyright (c) 2012 Inline Marmalade ltd.
@@ -33,8 +34,6 @@ import net.rim.device.api.io.MalformedURIException;
 import net.rim.device.api.io.NoCopyByteArrayOutputStream;
 import net.rim.device.api.io.URI;
 import net.rim.device.api.io.http.HttpProtocolConstants;
-import net.rim.device.api.io.transport.ConnectionDescriptor;
-import net.rim.device.api.io.transport.ConnectionFactory;
 
 /**
  * HttpClient 
@@ -45,12 +44,18 @@ public class HttpClient {
 	private static final int DEFAULT_COPY_BUFFER_SIZE = 64;
 	private static final int DEFAULT_MAX_REDIRECT_COUNT = 16;
 
-	protected ConnectionFactory _factory;
+	protected com.inlinemarmalade.util.http.ConnectionFactory _factory;
+
 	protected String _userAgent;
 	protected int _maxRedirect = DEFAULT_MAX_REDIRECT_COUNT;
 	protected HttpProxy _proxy;
 	
-	public HttpClient(ConnectionFactory factory) {
+	public HttpClient() {
+		this(new com.inlinemarmalade.util.http.ConnectionFactory());
+	}
+	
+	public HttpClient(com.inlinemarmalade.util.http.ConnectionFactory factory) {
+	
 		_factory = factory;
 		_userAgent = System.getProperty("browser.useragent");
 	}
@@ -77,8 +82,8 @@ public class HttpClient {
 		
 		String proxyUrl = "socket://" + _proxy._host + ":" + _proxy._port;
 		try {
-			ConnectionDescriptor desc = _factory.getConnection(proxyUrl);
-			Connection conn = desc.getConnection();
+			Connection conn = _factory.getConnection(proxyUrl);
+
 			if (conn == null)
 				throw new IOException("Unable to create connection");
 			SocketConnection sconn = (SocketConnection) conn;
@@ -152,8 +157,8 @@ public class HttpClient {
 		OutputStream stream = null;
 		
 		try {
-			ConnectionDescriptor desc = _factory.getConnection(url);
-			Connection conn = desc.getConnection();
+			Connection conn = _factory.getConnection(url);
+			
 			if (conn == null)
 				throw new IOException("Unable to create connection");
 			
