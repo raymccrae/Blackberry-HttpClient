@@ -215,7 +215,7 @@ public class HttpClient {
 					response._headers = new Hashtable();
 					
 					// Read Response headers
-					String key = null, value = null;
+					String key = "", value = null;
 					for (int index = 0; key != null; index++) {
 						key = hconn.getHeaderFieldKey(index);
 						if (key != null) {
@@ -304,7 +304,7 @@ public class HttpClient {
 		}
 	}
 	
-	protected static String urlencode(String s) 
+	public static String urlencode(String s) 
 	{ 
 	    if (s!=null) { 
 	        StringBuffer tmp = new StringBuffer(); 

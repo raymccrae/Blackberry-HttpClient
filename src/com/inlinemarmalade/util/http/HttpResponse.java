@@ -96,7 +96,7 @@ public class HttpResponse {
 	public String getFirstHeaderValue(String header) {
 		String value = null;
 		
-		if (_headers.contains(header)) {
+		if (_headers.containsKey(header)) {
 			Object val = _headers.get(header);
 			if (val instanceof Vector)
 				value = (String) ((Vector)val).elementAt(0);

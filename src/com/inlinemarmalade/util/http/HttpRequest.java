@@ -38,9 +38,15 @@ public class HttpRequest {
 	protected Object _output;
 	
 	public static HttpRequest head(String url) {
+		return head(url, null, null);
+	}
+	
+	public static HttpRequest head(String url, Hashtable args, HttpHeaders headers) {
 		HttpRequest request = new HttpRequest();
 		request._url = url;
 		request._method = HttpProtocolConstants.HTTP_METHOD_HEAD;
+		request._data = args;
+		request._headers = headers;
 		return request;
 	}
 	
@@ -114,27 +120,28 @@ public class HttpRequest {
 	}
 	
 	public String getFullUrl() {
-		if (HttpProtocolConstants.HTTP_METHOD_GET.equals(_method) && _data != null && _data instanceof Hashtable) {
-			StringBuffer buf = new StringBuffer(_url);
-			Hashtable args = (Hashtable) _data;
-			int i = 0;
-			for (Enumeration keys = args.keys(); keys.hasMoreElements();) {
-				if (i == 0)
-					buf.append('?');
-				else
-					buf.append('&');
-				String key = (String) keys.nextElement();
-				String val = (String) args.get(key);
-				buf.append(HttpClient.urlencode(key));
-				buf.append('=');
-				buf.append(HttpClient.urlencode(val));
-				i++;
+		if (HttpProtocolConstants.HTTP_METHOD_GET.equals(_method) || HttpProtocolConstants.HTTP_METHOD_HEAD.equals(_method)) {
+			if (_data != null && _data instanceof Hashtable) {
+				StringBuffer buf = new StringBuffer(_url);
+				Hashtable args = (Hashtable) _data;
+				int i = 0;
+				for (Enumeration keys = args.keys(); keys.hasMoreElements();) {
+					if (i == 0)
+						buf.append('?');
+					else
+						buf.append('&');
+					String key = (String) keys.nextElement();
+					String val = (String) args.get(key);
+					buf.append(HttpClient.urlencode(key));
+					buf.append('=');
+					buf.append(HttpClient.urlencode(val));
+					i++;
+				}
+				return buf.toString();
 			}
-			return buf.toString();
 		}
-		else {
-			return _url;
-		}
+		
+		return _url;
 	}
 	
 	protected void writePostData(OutputStream out) throws IOException {
