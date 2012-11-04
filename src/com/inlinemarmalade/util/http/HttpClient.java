@@ -29,11 +29,13 @@ import javax.microedition.io.Connection;
 import javax.microedition.io.HttpConnection;
 import javax.microedition.io.SocketConnection;
 import javax.microedition.io.file.FileConnection;
-
-import net.rim.device.api.io.MalformedURIException;
 import net.rim.device.api.io.NoCopyByteArrayOutputStream;
-import net.rim.device.api.io.URI;
 import net.rim.device.api.io.http.HttpProtocolConstants;
+
+//#ifndef BlackBerrySDK4.5.0 || BlackBerrySDK4.6.0 || BlackBerrySDK4.7.0
+import net.rim.device.api.io.MalformedURIException;
+import net.rim.device.api.io.URI;
+//#endif
 
 /**
  * HttpClient 
@@ -67,7 +69,8 @@ public class HttpClient {
 	public void setProxy(HttpProxy proxy) {
 		_proxy = proxy;
 	}
-	
+
+//#ifndef BlackBerrySDK4.5.0 || BlackBerrySDK4.6.0 || BlackBerrySDK4.7.0
 	protected HttpResponse executeProxyConnection(String url, int redirectCount, HttpRequest request) throws IOException, IllegalArgumentException, MalformedURIException {
 		if (_maxRedirect != -1 && redirectCount >= _maxRedirect) {
 			throw new IOException("Exceeded max redirect count");
@@ -144,6 +147,7 @@ public class HttpClient {
 		
 		return response;
 	}
+//#endif
 	
 	protected HttpResponse executeDirectConnection(String url, int redirectCount, HttpRequest request) throws IOException {
 		if (_maxRedirect != -1 && redirectCount >= _maxRedirect) {

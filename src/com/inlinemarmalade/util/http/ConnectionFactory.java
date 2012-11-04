@@ -17,6 +17,7 @@ import net.rim.device.api.system.WLANInfo;
 
 //#ifndef BlackBerrySDK4.5.0 || BlackBerrySDK4.6.0 || BlackBerrySDK4.7.0
 import net.rim.device.api.io.transport.ConnectionDescriptor;
+import net.rim.device.api.io.transport.TransportInfo;
 //#endif
 
 public class ConnectionFactory {
@@ -46,6 +47,7 @@ public class ConnectionFactory {
 	private int lastTransport = -1;
 	
 	//#ifndef BlackBerrySDK4.5.0 || BlackBerrySDK4.6.0 || BlackBerrySDK4.7.0
+	private static int[] TRANSPORT_ORDER = { TransportInfo.TRANSPORT_BIS_B, TransportInfo.TRANSPORT_TCP_WIFI, TransportInfo.TRANSPORT_TCP_CELLULAR, TransportInfo.TRANSPORT_MDS, TransportInfo.TRANSPORT_WAP2, TransportInfo.TRANSPORT_WAP };
 	private net.rim.device.api.io.transport.ConnectionFactory _proxyConnectionFactory = new net.rim.device.api.io.transport.ConnectionFactory();
 	//#endif
 	
@@ -62,6 +64,9 @@ public class ConnectionFactory {
 			loadServiceBooks(false);
 		}
 		transports = transportPriority;
+		//#ifndef BlackBerrySDK4.5.0 || BlackBerrySDK4.6.0 || BlackBerrySDK4.7.0
+		_proxyConnectionFactory.setPreferredTransportTypes(TRANSPORT_ORDER);
+		//#endif
 	}
 	
 	public HttpConnection getConnection(String pURL) {
